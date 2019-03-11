@@ -330,9 +330,9 @@ export default {
       // 房间A:隔墙1
       this.createCubeWall(10, 200, 250, 0, this.matArrayA, -151, 100, 325);
       //房间A:隔墙2  无门
-      this.createCubeWall(10, 200, 220, 0.5, this.matArrayA, -256, 100, 201);
+      // this.createCubeWall(10, 200, 220, 0.5, this.matArrayA, -256, 100, 201);
       // 厨房：隔墙3
-      this.createCubeWall(350, 200, 10, 0, this.matArrayA, 481, 100, 131);
+      // this.createCubeWall(350, 200, 10, 0, this.matArrayA, 481, 100, 131);
       // 厨房：隔墙4 无门
       this.createCubeWall(10, 200, 200, 0, this.matArrayA, 301, 100, 225);
       // 房间B
@@ -340,7 +340,7 @@ export default {
       //房间B  无门
       this.createCubeWall(200, 200, 10, 0.5, this.matArrayA, 0, 100, -350);
       // 房间C
-      this.createCubeWall(220, 200, 10, 0, this.matArrayA, 540, 100, -50);
+      // this.createCubeWall(220, 200, 10, 0, this.matArrayA, 540, 100, -50);
       //房间C 无门
       this.createCubeWall(200, 200, 10, 0.5, this.matArrayA, 250, 100, -350);
       //厕所
@@ -487,9 +487,100 @@ export default {
       this.createFloor();
       this.createLayout();
     },
+    createServerBox() {
+      let group = new THREE.Group();
+      let groups = new THREE.Group();
+      let loader = new THREE.TextureLoader();
+      let geometry = new THREE.BoxBufferGeometry(100, 250, 100);
+      let texture_front = loader.load(require("../images/rack_front_door.jpg"));
+      let texture_back = loader.load(require("../images/rack_door_back.jpg"));
+      let texture_rack = loader.load(require("../images/rack.jpg"));
+
+      let material = new THREE.MeshBasicMaterial({
+        map: texture_front,
+        side: THREE.DoubleSide,
+        alphaTest: 0.5
+        // color: 0xff0000
+      });
+      let materia2 = new THREE.MeshBasicMaterial({
+        map: texture_back,
+        side: THREE.DoubleSide,
+        alphaTest: 0.5
+        // color: 0xff0000
+      });
+      let materia3 = new THREE.MeshBasicMaterial({
+        map: texture_rack,
+        side: THREE.DoubleSide,
+        alphaTest: 0.5
+      });
+      material.opacity = 1.0;
+      material.transparent = true;
+      materia2.opacity = 1.0;
+      materia2.transparent = true;
+      materia3.opacity = 1.0;
+      materia3.transparent = true;
+
+      let materials = [
+        materia3,
+        materia3,
+        materia3,
+        materia3,
+        material,
+        materia2
+      ];
+      let cubeMesh = new THREE.Mesh(geometry, materials);
+      cubeMesh.position.set(0, 150, 0);
+      group.add(cubeMesh);
+
+      let group1 = group.clone();
+      group1.position.set(200, 0, 0);
+      let group2 = group.clone();
+      group2.position.set(-200, 0, 0);
+
+      groups.add(group);
+      groups.add(group1);
+      groups.add(group2);
+      this.scene.add(groups);
+    },
+    // /创建波浪图形的方法
+    radialWave(u, v, target) {
+      var r = 50;
+      var z = u * r;
+      var x = v * r;
+      var y = Math.sin(u * 2 * Math.PI) * 3.8;
+      target.set(x, y, z);
+    },
+    initwindLine() {
+      // 创建法向量纹理
+      // var axis = new THREE.AxisHelper(500);
+      // axis.position.set(0, 100, 100);
+      // this.scene.add(axis);
+      let loader = new THREE.TextureLoader();
+      this.texture_arrow = loader.load(require("../images/alert.png"));
+      this.texture_arrow.wrapS = this.texture_arrow.wrapT =
+        THREE.RepeatWrapping;
+      this.texture_arrow.repeat.set(10, 10);
+      this.texture_arrow.rotation = Math.PI / 2;
+      this.texture_arrow.anisotropy = this.renderer.capabilities.getMaxAnisotropy();
+      this.texture_arrow.matrixAutoUpdate = true;
+      let meshMaterial = new THREE.MeshBasicMaterial({
+        map: this.texture_arrow,
+        side: THREE.DoubleSide,
+        alphaTest: 0.5
+      });
+      meshMaterial.opacity = 1.0;
+      meshMaterial.transparent = true;
+      var windGeo = new THREE.ParametricGeometry(this.radialWave, 12, 12);
+      var windMesh = new THREE.Mesh(windGeo, meshMaterial);
+      windMesh.position.set(0, 100, -100);
+      windMesh.scale.set(8, 8, 8);
+      windMesh.rotation.set(0, 0, 0);
+      this.scene.add(windMesh);
+    },
     //初始化函数
     init() {
       let door_state = true; //默认是门是关闭的
+      this.aa = 1;
       let SCREEN_WIDTH = window.innerWidth,
         SCREEN_HEIGHT = window.innerHeight;
       //let VIEW_ANGLE = 45, ASPECT = SCREEN_WIDTH / SCREEN_HEIGHT, NEAR = 0.1, FAR = 20000;
@@ -511,8 +602,12 @@ export default {
       this.initLight();
       this.initObject();
       this.createflowerpot();
+      this.createServerBox();
+      this.initwindLine();
       this.animate();
+
       //监听键盘按键
+
       document.addEventListener("keydown", this.onkeyDown, false);
     },
     onkeyDown(event) {
@@ -542,6 +637,14 @@ export default {
       let delta = this.clock.getDelta();
       let moveDistance = 200 * delta;
       let rotateAngle = (Math.PI / 2) * delta;
+
+      if (this.aa > 0) {
+        this.aa -= Math.random() * 0.2;
+      } else {
+        this.aa = 1;
+      }
+      this.texture_arrow.offset.set(0, this.aa);
+      // this.texture_arrow.matrix.translate(0, Math.random() * 0.1);
       this.controls.update();
     }
   }
